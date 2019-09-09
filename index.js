@@ -310,9 +310,7 @@ function createHtmlFileList(files, dir, useIcons, view) {
 
       return (
         `<li><a href="${escapeHtml(
-          `/${base}
-          ${normalizeSlashes(normalize(p.join('/')))}
-          ${isDir ? '/' : ''}`,
+          `/${base}${normalizeSlashes(normalize(p.join('/')))}${isDir ? '/' : ''}`,
         )}" class="${escapeHtml(classes.join(' '))}"`
           + ` title="${escapeHtml(file.name)}">`
           + `<span class="name">${escapeHtml(file.name)}</span>`
