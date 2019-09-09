@@ -312,8 +312,7 @@ function createHtmlFileList(files, dir, useIcons, view) {
         `<li><a href="${escapeHtml(
           `/${base}
           ${normalizeSlashes(normalize(p.join('/')))}
-          ${isDir ? '/' : ''}
-          `,
+          ${isDir ? '/' : ''}`,
         )}" class="${escapeHtml(classes.join(' '))}"`
           + ` title="${escapeHtml(file.name)}">`
           + `<span class="name">${escapeHtml(file.name)}</span>`
