@@ -28,13 +28,17 @@ var mime = require('mime-types');
 var parseUrl = require('parseurl');
 var resolve = require('path').resolve;
 
+let base = '';
+
 /**
  * Module exports.
  * @public
  */
 
-module.exports = serveIndex;
-
+module.exports = (basePath) => {
+  base = basePath;
+ return serveIndex;
+}
 /*!
  * Icon cache.
  */
@@ -68,6 +72,8 @@ var mediaType = {
   'text/plain': 'plain',
   'application/json': 'json'
 };
+
+
 
 /**
  * Serve directory listings with the given `root` path.
@@ -261,55 +267,62 @@ serveIndex.plain = function _plain (req, res, files, next, dir, showUp, icons, p
  */
 
 function createHtmlFileList(files, dir, useIcons, view) {
-  var html = '<ul id="files" class="view-' + escapeHtml(view) + '">'
-    + (view === 'details' ? (
-      '<li class="header">'
-      + '<span class="name">Name</span>'
-      + '<span class="size">Size</span>'
-      + '<span class="date">Modified</span>'
-      + '</li>') : '');
+  let html = `<ul id="files" class="view-${escapeHtml(view)}">${
+    view === 'details'
+      ? '<li class="header">'
+          + '<span class="name">Name</span>'
+          + '<span class="size">Size</span>'
+          + '<span class="date">Modified</span>'
+          + '</li>'
+      : ''
+  }`;
 
-  html += files.map(function (file) {
-    var classes = [];
-    var isDir = file.stat && file.stat.isDirectory();
-    var path = dir.split('/').map(function (c) { return encodeURIComponent(c); });
+  html += files
+    .map((file) => {
+      const classes = [];
+      const isDir = file.stat && file.stat.isDirectory();
+      const p = dir.split('/').map((c) => encodeURIComponent(c));
 
-    if (useIcons) {
-      classes.push('icon');
-
-      if (isDir) {
-        classes.push('icon-directory');
-      } else {
-        var ext = extname(file.name);
-        var icon = iconLookup(file.name);
-
+      if (useIcons) {
         classes.push('icon');
-        classes.push('icon-' + ext.substring(1));
 
-        if (classes.indexOf(icon.className) === -1) {
-          classes.push(icon.className);
+        if (isDir) {
+          classes.push('icon-directory');
+        } else {
+          const ext = extname(file.name);
+          const icon = iconLookup(file.name);
+
+          classes.push('icon');
+          classes.push(`icon-${ext.substring(1)}`);
+
+          if (classes.indexOf(icon.className) === -1) {
+            classes.push(icon.className);
+          }
         }
       }
-    }
 
-    path.push(encodeURIComponent(file.name));
+      p.push(encodeURIComponent(file.name));
 
-    var date = file.stat && file.name !== '..'
-      ? file.stat.mtime.toLocaleDateString() + ' ' + file.stat.mtime.toLocaleTimeString()
-      : '';
-    var size = file.stat && !isDir
-      ? file.stat.size
-      : '';
+      const date = file.stat && file.name !== '..'
+        ? `${file.stat.mtime.toLocaleDateString()} ${file.stat.mtime.toLocaleTimeString()}`
+        : '';
+      const size = file.stat && !isDir ? file.stat.size : '';
 
-    return '<li><a href="'
-      + escapeHtml(normalizeSlashes(normalize(path.join('/'))))
-      + '" class="' + escapeHtml(classes.join(' ')) + '"'
-      + ' title="' + escapeHtml(file.name) + '">'
-      + '<span class="name">' + escapeHtml(file.name) + '</span>'
-      + '<span class="size">' + escapeHtml(size) + '</span>'
-      + '<span class="date">' + escapeHtml(date) + '</span>'
-      + '</a></li>';
-  }).join('\n');
+      return (
+        `<li><a href="${escapeHtml(
+          `/${base}
+          ${normalizeSlashes(normalize(p.join('/')))}
+          ${isDir ? '/' : ''}
+          `,
+        )}" class="${escapeHtml(classes.join(' '))}"`
+          + ` title="${escapeHtml(file.name)}">`
+          + `<span class="name">${escapeHtml(file.name)}</span>`
+          + `<span class="size">${escapeHtml(size)}</span>`
+          + `<span class="date">${escapeHtml(date)}</span>`
+          + '</a></li>'
+      );
+    })
+    .join('\n');
 
   html += '</ul>';
 
@@ -373,19 +386,25 @@ function getRequestedDir (req) {
  */
 
 function htmlPath(dir) {
-  var parts = dir.split('/');
-  var crumb = new Array(parts.length);
+  const parts = dir.split('/');
+  const crumb = [];
 
-  for (var i = 0; i < parts.length; i++) {
-    var part = parts[i];
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
 
     if (part) {
       parts[i] = encodeURIComponent(part);
-      crumb[i] = '<a href="' + escapeHtml(parts.slice(0, i + 1).join('/')) + '">' + escapeHtml(part) + '</a>';
+      crumb.push(
+        `<a href="/${base}${escapeHtml(
+          `${parts.slice(0, i + 1).join('/')}/`,
+        )}">${escapeHtml(part)}</a>`,
+      );
     }
   }
 
-  return crumb.join(' / ');
+  crumb.unshift([`<a href="/${base}">~</a>`]);
+
+  return crumb.join('/');
 }
 
 /**
